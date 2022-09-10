@@ -6,7 +6,8 @@ import logger from './helpers/logger.js'
 import { Logger } from 'log4js';
 import db, { Recipt } from './helpers/database.js';
 import { createReciptMessage } from './helpers/recipt-format.js';
-import { reciptsList } from './helpers/phrases.js';
+import { ph } from './helpers/phrases.js';
+import { messageParser, WordTriggers } from './helpers/message-parser.js';
 // import { reciptsList } from './helpers/phrases.js';
 
 const bot = new Telegraf<Scenes.SceneContext>(conf.botToken);
@@ -32,10 +33,16 @@ const defaultResp = (): any => {
 (async (): Promise<void> => {
   const _logger: Logger = logger.get('Main')
   await pause(1000);
-  bot.on('text', async (ctx) => {
+
+  bot.command('start', async (ctx) => {
     _logger.info('Получил сообщение')
-    ctx.reply('Привет я бот с рецептам, хочешь посмотреть?', defaultResp())
+    ctx.reply(ph.welcome, defaultResp())
   })
+
+  bot.command('brc', async (ctx) => {
+    _logger.info('Получил команду на вывод всех завтраков')
+    ctx.reply(ph.reciptsList, defaultResp())
+  })]
 
 
   bot.action(Buttons.DISHES_LIST, async (ctx) => {
@@ -46,7 +53,7 @@ const defaultResp = (): any => {
       callback_data: `choose_current_recip_!!_${r.id}`
     }))
 
-    await ctx.reply(reciptsList, {
+    await ctx.reply(ph.reciptsList, {
       reply_markup: JSON.stringify({
         inline_keyboard: [d]
       }) as any
@@ -68,6 +75,27 @@ const defaultResp = (): any => {
     })
     _logger.info('Отдал рецепт')
   })
+
+  bot.on(('text'), ctx => {
+    _logger.info('Перехватил текстовое сообщение')
+    const {text}: any = ctx.update.message;
+
+    const filtered = messageParser(text);
+
+    if(filtered === WordTriggers.NAME) {
+      _logger.info('Обратились по имени')
+      ctx.reply(ph.reciptsList, defaultResp());
+    }
+
+    if(filtered === WordTriggers.BREACKFAST) {
+      _logger.info('Обратились за завтраками')
+      ctx.reply(ph.reciptsList, defaultResp());
+    }
+
+  })
+
+
+
   bot.launch();
 })()
 
